@@ -1,0 +1,6 @@
+- 👋 Hi, I’m Huw Evans aka @DevHuw
+- 👀 I’m interested in programing, gaming, editing/photoshop & parkour 
+- 🌱 I’m currently learning C++, C# & rust
+- 💞️ I’m looking to collaborate on any python projects
+- 📫 How to reach me [huw.cle@gmail.com]
+- 👨🏻‍💻 I code in python, lua, C, java & java script, html, css, sql, kotlin & visual basic
