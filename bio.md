@@ -1,4 +1,4 @@
-- 👋 Hi, I’m Huw Evans aka @DevHuw
+- 👋 Hi, I’m Huw Evans (aka @DevHuw) a 13 year old programmer
 - 👀 I’m interested in programming, gaming, editing/photoshop & parkour 
 - 🌱 I’m currently learning C++, C# & rust
 - 💞️ I’m looking to collaborate on any python projects
