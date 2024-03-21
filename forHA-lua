@@ -1,0 +1,330 @@
+local Players = game:GetService("Players")
+local RS = game:GetService("ReplicatedStorage")
+local UIS = game:GetService("UserInputService")
+local MS = game:GetService("MarketplaceService")
+local TS = game:GetService("TweenService")
+local tweenModule = require(RS.Modules.TweenGUI)
+local abbrevModule = require(RS.Modules.Converters.Abbreviations)
+local passesModule = require(RS.Modules.Passes)
+local ranksModule = require(RS.Modules.Ranks)
+local soundModule = require(RS.Modules.Sounds)
+local player = Players.LocalPlayer
+
+
+local playerData = player:WaitForChild("PlayerData")
+local isLoaded = playerData:WaitForChild("Status"):WaitForChild("IsLoaded")
+repeat task.wait() until isLoaded.Value
+
+local playerRank = playerData.Data.EquippedRank
+local currentUI = playerData.Status.CurrentUI
+local islandBoost = playerData.Status.IslandBoost
+local potions = playerData.Potions
+local dataFolder = player.PlayerData.Data
+local screenGUI = script.Parent
+local displayFrames = screenGUI.Left.Displays
+local clickerFolder = screenGUI.Bottom.AutoClickButtons
+local clickEvent = RS.Events.Click
+local clickDebounce = false
+local clickButton = screenGUI.Bottom.ClickButton
+local buttonSize = UDim2.fromScale(clickButton.Size.X.Scale,clickButton.Size.Y.Scale)
+local clickPopup = RS.Clones.PopupTemplate
+local PotionTimers = screenGUI.Bottom.PotionTimers
+local autoRebButton = screenGUI.Bottom.AutoRebirth
+local islandBoostLabel = screenGUI.Top.IslandBoost
+local updateButton = screenGUI.UpdateLog
+local updateSize = UDim2.fromScale(updateButton.Size.X.Scale,updateButton.Size.Y.Scale)
+
+local gameEvents = RS.GameEvent
+local gameEventDisplay = screenGUI.Top.EventDisplay
+
+local eventData = {
+	["EndTime"] = {"⏳",""},
+	["ClickMultiplier"] = {"🖱️","x Clicks"},
+	["GemMultiplier"] = {"💎","x Gems"},
+	["LuckMultiplier"] = {"🍀","x Luck"},
+	["HatchingSpeed"] = {"🥚","x Speed"}
+}
+
+local clickerImages = {
+	["FreeClicker"] = {
+		[1] = 13590292493,
+		[0] = 13590295744
+	},
+	["VIPClicker"] = {
+		[1] = 13590286686,
+		[0] = 13590289758
+	}
+}
+
+
+local function getDuration(seconds)
+	if seconds<0 then return end
+	local result = ""
+	local minutes = math.floor(seconds/60)
+	local hours = math.floor(minutes/60)
+	local days = math.floor(hours/24)
+	hours = hours%24
+	minutes = minutes%60
+	seconds = seconds%60
+	
+	if hours<10 then hours = "0"..hours end
+	if minutes<10 then minutes = "0"..minutes end
+	if seconds<10 then seconds = "0"..seconds end
+
+	if days ~= 0 then return days..":"..hours..":"..minutes..":"..seconds end
+	if hours ~= "00" then return hours..":"..minutes..":"..seconds end
+	return minutes..":"..seconds
+end
+
+
+clickEvent.OnClientEvent:Connect(function(amount)
+	local posX = math.random(30,90)/100
+	local posY = math.random(20,80)/100
+
+	local clone = clickPopup:Clone()
+	if amount ~= 1 then clone.Text = "+"..abbrevModule.abbreviate(amount).." Clicks" end
+	clone.Position = UDim2.fromScale(posX,posY)
+	clone.Rotation = math.random(-10,10)
+	clone.Parent = screenGUI
+	task.wait(0.5)
+	TS:Create(clone,TweenInfo.new(1,Enum.EasingStyle.Quad,Enum.EasingDirection.In),{Position=UDim2.fromScale(posX,posY-1)}):Play()
+	task.wait(1)
+	clone:Destroy()
+end)
+
+local function performClick()
+	if not clickDebounce then
+		clickDebounce = true
+		soundModule.playSound("Click2")
+		clickEvent:FireServer()
+		task.wait(0.1)
+		clickDebounce = false
+	end
+end
+
+for _,clicker in clickerFolder:GetChildren() do
+	if not clicker:IsA("ImageLabel") then continue end
+	local buttonSize = UDim2.fromScale(clicker.Size.X.Scale,clicker.Size.Y.Scale)
+	--button.MouseEnter:Connect(function()
+	--	if clicker.NotUnlocked.Visible then return end
+	--	tweenModule.HoverOn(button,buttonSize,1.05)
+	--end)
+	--button.MouseLeave:Connect(function()
+	--	tweenModule.HoverOff(button,buttonSize)
+	--end)
+	clicker.Click.MouseButton1Up:Connect(function()
+		if clicker.NotUnlocked.Visible then 
+			if clicker.Name == "VIPClicker" then
+				MS:PromptGamePassPurchase(player,passesModule.getPassId("VIP"))
+			end
+			soundModule.playSound("Insufficient")
+			return 
+		end
+		soundModule.playSound("Click")
+		
+		local waitTime = clicker:GetAttribute("DebounceTime")
+		if clicker.Image == "rbxassetid://"..clickerImages[clicker.Name][0] then
+			clicker.Image = "rbxassetid://"..clickerImages[clicker.Name][1]
+			while clicker.Image == "rbxassetid://"..clickerImages[clicker.Name][1] do
+				task.spawn(function() performClick() end)
+				task.wait(waitTime)
+			end
+		else
+			clicker.Image = "rbxassetid://"..clickerImages[clicker.Name][0]
+		end
+	end)
+end
+
+
+
+
+
+
+--ClickEvent
+--clickButton.MouseEnter:Connect(function()
+--	tweenModule.HoverOn(clickButton,buttonSize,1.02)
+--end)
+--clickButton.MouseLeave:Connect(function()
+--	tweenModule.HoverOff(clickButton,buttonSize)
+--end)
+clickButton.MouseButton1Up:Connect(function()
+	performClick()
+end)
+UIS.InputEnded:Connect(function(input,gameProcessed)
+	if not gameProcessed and not clickDebounce then
+
+		local inputType = input.UserInputType
+		if inputType == Enum.UserInputType.MouseButton1 or inputType == Enum.UserInputType.Touch then
+			performClick()
+		end
+
+	end
+end)
+
+--Open UIs
+for _,button in script.Parent.Left.Buttons:GetChildren() do
+	--local size = UDim2.fromScale(button.Size.X.Scale,button.Size.Y.Scale)
+	--button.MouseEnter:Connect(function()
+	--	tweenModule.HoverOn(button,size,1.1)
+	--end)
+	--button.MouseLeave:Connect(function()
+	--	tweenModule.HoverOff(button,size)
+	--end)
+	button.MouseButton1Up:Connect(function()
+		soundModule.playSound("Click")
+		if currentUI.Value ~= button.Name then currentUI.Value = button.Name else currentUI.Value = "" end
+	end)
+end
+
+--Display Labels
+for _,display in displayFrames:GetChildren() do
+	local data = dataFolder:FindFirstChild(display.Name)
+	if data then
+		if display:FindFirstChild("Holder") then
+			display.Holder.DisplayText.Text = abbrevModule.abbreviate(data.Value)
+		else
+			display.DisplayText.Text = abbrevModule.abbreviate(data.Value)
+		end
+		data.Changed:Connect(function(value)
+			if display:FindFirstChild("Holder") then
+				display.Holder.DisplayText.Text = abbrevModule.abbreviate(value)
+			else
+				display.DisplayText.Text = abbrevModule.abbreviate(value)
+			end
+		end)
+	end
+end
+
+
+if playerData.Passes.VIP.Value then clickerFolder:WaitForChild("VIPClicker"):WaitForChild("NotUnlocked").Visible = false end
+playerData.Passes.VIP.Changed:Connect(function(val)
+	clickerFolder.VIPClicker.NotUnlocked.Visible = not val
+	clickerFolder.VIPClicker.Image = "rbxassetid://"..clickerImages["VIPClicker"][0]
+end)
+
+
+local currentDebounce = ranksModule.getClickDebounce(playerRank.Value)
+if currentDebounce then
+	clickerFolder.FreeClicker:SetAttribute("DebounceTime",currentDebounce)
+	clickerFolder.FreeClicker.NotUnlocked.Visible = false
+end
+
+playerRank.Changed:Connect(function(val)
+	local currentDebounce = ranksModule.getClickDebounce(val)
+	if currentDebounce then
+		clickerFolder.FreeClicker:SetAttribute("DebounceTime",currentDebounce)
+		clickerFolder.FreeClicker.NotUnlocked.Visible = false
+	else
+		clickerFolder.FreeClicker.NotUnlocked.Visible = true
+		clickerFolder.FreeClicker.Image = "rbxassetid://"..clickerImages["FreeClicker"][0]
+	end
+end)
+
+
+
+islandBoostLabel.Text = "🏝️ Island Boost: x"..islandBoost.Value
+islandBoost.Changed:Connect(function(value)
+	islandBoostLabel.Text = "🏝️ Island Boost: x"..value
+end)
+
+
+
+if playerData.Passes.AutoRebirth.Value then
+	autoRebButton.NotUnlocked.Visible = false
+end
+playerData.Passes.AutoRebirth.Changed:Connect(function(val)
+	autoRebButton.NotUnlocked.Visible = not val
+end)
+
+local autoSize = UDim2.fromScale(autoRebButton.Size.X.Scale,autoRebButton.Size.Y.Scale)
+--autoRebButton.MouseEnter:Connect(function()
+--	if autoRebButton.NotUnlocked.Visible then return end
+--	tweenModule.HoverOn(autoRebButton,autoSize,1.05)
+--end)
+--autoRebButton.MouseLeave:Connect(function()
+--	tweenModule.HoverOff(autoRebButton,autoSize)
+--end)
+autoRebButton.MouseButton1Up:Connect(function()
+	soundModule.playSound("Click")
+	if autoRebButton.NotUnlocked.Visible then
+		MS:PromptGamePassPurchase(player,passesModule.getPassId("AutoRebirth"))
+	else
+		if currentUI.Value ~= "AutoRebirthGUI" then currentUI.Value = "AutoRebirthGUI" else currentUI.Value = "" end
+	end
+end)
+
+
+if playerData.Upgrades.Spawn.TeleportButton.Value > 0 then
+	screenGUI.Left.Buttons.TeleportGUI.Visible = true
+end
+playerData.Upgrades.Spawn.TeleportButton.Changed:Connect(function(val)
+	if val>0 then
+		screenGUI.Left.Buttons.TeleportGUI.Visible = true
+	else
+		screenGUI.Left.Buttons.TeleportGUI.Visible = false
+	end
+end)
+
+
+
+updateButton.MouseEnter:Connect(function()
+	tweenModule.HoverOn(updateButton,updateSize,1.05)
+end)
+updateButton.MouseLeave:Connect(function()
+	tweenModule.HoverOff(updateButton,updateSize)
+end)
+updateButton.Click.MouseButton1Up:Connect(function()
+	currentUI.Value = "UpdateGUI"
+end)
+
+
+while task.wait(1) do
+	for _,timer in PotionTimers:GetChildren() do
+		if timer:IsA("UIListLayout") then continue end
+		local curTime = playerData.Leaderboard.TimePlayed.Value
+		local endTime = potions:FindFirstChild(timer.Name.."End")
+		if not endTime then continue end
+		local duration = getDuration(endTime.Value-curTime-1)
+		if duration then
+			timer.Visible = true
+			timer.DurationDisplay.Text = duration
+		else
+			timer.Visible = false
+		end
+	end
+	
+	
+	
+	
+	if gameEvents.EndTime.Value > os.time() then
+		gameEventDisplay.Visible = true
+		
+		for _,instance in gameEvents:GetChildren() do
+			local name = instance.Name
+			local dataTable = eventData[name]
+			local val = getDuration(instance.Value-os.time()) or abbrevModule.abbreviate(instance.Value)
+			if name == "ClickMultiplier" then
+				gameEventDisplay[name].Text = dataTable[1].." "..val..dataTable[2].." "..dataTable[1]
+			elseif name == "LuckMultiplier" then
+				gameEventDisplay[name].Text = dataTable[1].." +"..val..dataTable[2].." "..dataTable[1]
+			elseif name == "GemMultiplier" then
+				gameEventDisplay[name].Text = dataTable[1].." "..val..dataTable[2].." "..dataTable[1]
+			elseif name == "HatchingSpeed" then
+				gameEventDisplay[name].Text = dataTable[1].." "..val..dataTable[2].." "..dataTable[1]
+			elseif name == "EndTime" then
+				gameEventDisplay[name].Text = dataTable[1].." "..val..dataTable[2].." "..dataTable[1]
+			end
+			if type(val) == "number" and val <= 0 then
+				gameEventDisplay[name].Visible = false
+			else
+				if name ~= "LuckMultiplier" and val == 1 then gameEventDisplay[name].Visible = false continue end
+				gameEventDisplay[name].Visible = true
+			end
+		end
+		
+	else
+		gameEventDisplay.Visible = false
+	end
+end
+
+--cheers for the work, hope to work with you again some time -Detail
